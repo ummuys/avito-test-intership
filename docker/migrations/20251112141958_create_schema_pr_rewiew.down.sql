@@ -1,0 +1,1 @@
+DELETE SCHEMA IF EXISTS pr_review;

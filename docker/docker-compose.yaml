@@ -1,0 +1,49 @@
+services:
+
+  pr-service:
+    container_name: pr-service
+    build:
+      context: ./..
+      dockerfile: docker/Dockerfile
+    ports:
+      - 8080:8080
+    env_file:
+    - ../environment/.env.example
+    depends_on:
+      db-pr-migs:
+        condition: service_completed_successfully
+
+
+  db-pr:
+    image: postgres:17
+    container_name: db-pr
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${PR_DB_NAME}
+      POSTGRES_USER: ${PR_DB_USER}
+      POSTGRES_PASSWORD: ${PR_DB_PASSWORD}
+    ports:
+      - "${PR_DB_PORT_OUT}:${PR_DB_PORT_IN}"
+    volumes:
+      - db-pr-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${PR_DB_USER} -d ${PR_DB_NAME}" ]
+      interval: 1s
+      timeout: 1s
+      retries: 5
+
+  db-pr-migs:
+    image: migrate/migrate:latest
+    container_name: db-pr-migs
+    depends_on:
+      db-pr:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations
+    command: ["-path", "/migrations", "-database", "${PR_DB_URL}", "up"]
+    restart: "no"
+
+volumes:
+  db-pr-data:

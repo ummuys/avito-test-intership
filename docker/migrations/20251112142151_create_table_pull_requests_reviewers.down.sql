@@ -1,0 +1,1 @@
+DELETE TABLE IF EXISTS pr_review.pull_request_reviewers;
