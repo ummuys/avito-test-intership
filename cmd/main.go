@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/ummuys/avito-test-intership/internal/di"
 	"github.com/ummuys/avito-test-intership/internal/web"
@@ -23,21 +24,31 @@ func main() {
 	appLogger := tools.Logger.AppLog
 
 	// INTERFACES
-	rep := di.InitRepositories(tools.Logger.DbLog)
+	rep, err := di.InitRepositories(ctx, tools.Logger.DbLog)
+	if err != nil {
+		appLogger.Fatal().Err(err).Msg("")
+	}
 	svc := di.InitServices(rep, tools.Logger.SvcLog)
 	hand := di.InitHandlers(svc, tools.Logger.SrvLog)
-	srv := web.InitServer(hand)
+	srv := web.InitServer(hand, tools.Logger.SrvLog)
 	appLogger.Info().Msg("Init all interfaces")
 
 	// SYNC TOOLS
 	wg := sync.WaitGroup{}
-	errch := make(chan error, 1)
+	errch := make(chan error, 2)
+
+	wg.Go(func() {
+		<-ctx.Done()
+		defer srv.Close()
+		srvCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		errch <- srv.Shutdown(srvCtx)
+	})
 
 	wg.Go(func() {
 		errch <- web.RunServer(srv)
 	})
 
-	<-ctx.Done()
 	wg.Wait()
 	close(errch)
 
@@ -50,9 +61,9 @@ func main() {
 	}
 
 	if haveErr {
-		tools.Logger.AppLog.Error().Msg("fatal shutdown")
+		tools.Logger.AppLog.Error().Msg("Fatal shutdown")
 	} else {
-		tools.Logger.AppLog.Info().Msg("shutdown successful")
+		tools.Logger.AppLog.Info().Msg("Shutdown successful")
 	}
 
 }

@@ -1,6 +1,7 @@
 package di
 
 import (
+	"context"
 	"os"
 
 	"github.com/rs/zerolog"
@@ -18,16 +19,30 @@ func InitTools() (Tools, error) {
 	return Tools{Logger: logger}, nil
 }
 
-func InitRepositories(logger *zerolog.Logger) Repositories {
-	prdb := repository.NewPRDB(logger)
-	return Repositories{PRDB: prdb}
+func InitRepositories(ctx context.Context, logger *zerolog.Logger) (Repositories, error) {
+	prDB, err := repository.NewPRDB(ctx, logger)
+	if err != nil {
+		return Repositories{}, err
+	}
+
+	uDB, err := repository.NewUserDB(ctx, logger)
+	if err != nil {
+		return Repositories{}, err
+	}
+
+	tDB, err := repository.NewTeamDB(ctx, logger)
+	if err != nil {
+		return Repositories{}, err
+	}
+
+	return Repositories{PRDB: prDB, UserDB: uDB, TeamDB: tDB}, nil
 }
 
 func InitServices(rep Repositories, logger *zerolog.Logger) Services {
 	prs := service.NewPRService(rep.PRDB, logger)
 	ss := service.NewServerService(rep.PRDB, logger)
-	ts := service.NewTeamService(rep.PRDB, logger)
-	us := service.NewUserService(rep.PRDB, logger)
+	ts := service.NewTeamService(rep.TeamDB, logger)
+	us := service.NewUserService(rep.UserDB, logger)
 	return Services{PRService: prs, ServerService: ss, TeamService: ts, UserService: us}
 }
 

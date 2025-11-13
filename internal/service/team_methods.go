@@ -1,23 +1,28 @@
 package service
 
 import (
+	"context"
+
 	"github.com/rs/zerolog"
+	"github.com/ummuys/avito-test-intership/internal/errs"
+	"github.com/ummuys/avito-test-intership/internal/models"
 	"github.com/ummuys/avito-test-intership/internal/repository"
 )
 
 type ts struct {
-	db     repository.PRDB
+	db     repository.TeamDB
 	logger *zerolog.Logger
 }
 
-func NewTeamService(db repository.PRDB, logger *zerolog.Logger) TeamService {
+func NewTeamService(db repository.TeamDB, logger *zerolog.Logger) TeamService {
 	return &ts{db: db, logger: logger}
 }
 
-func (t *ts) Create() {
-
+func (t *ts) Add(ctx context.Context, body models.AddTeamRequest) error {
+	return errs.ParsePgErr(t.db.AddTeam(ctx, body))
 }
 
-func (t *ts) Get() {
-
+func (t *ts) Get(ctx context.Context, teamName string) ([][]any, error) {
+	mbrs, err := t.db.GetTeam(ctx, teamName)
+	return mbrs, errs.ParsePgErr(err)
 }

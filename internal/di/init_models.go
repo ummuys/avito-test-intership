@@ -12,7 +12,9 @@ type Tools struct {
 }
 
 type Repositories struct {
-	PRDB repository.PRDB
+	PRDB   repository.PRDB
+	UserDB repository.UserDB
+	TeamDB repository.TeamDB
 }
 
 type Services struct {

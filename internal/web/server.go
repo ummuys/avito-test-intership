@@ -6,10 +6,12 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 	"github.com/ummuys/avito-test-intership/internal/di"
+	"github.com/ummuys/avito-test-intership/internal/web/middleware"
 )
 
-func InitServer(hand di.Handlers) *http.Server {
+func InitServer(hand di.Handlers, logger *zerolog.Logger) *http.Server {
 	gin.SetMode(gin.ReleaseMode)
 	g := gin.New()
 
@@ -20,12 +22,12 @@ func InitServer(hand di.Handlers) *http.Server {
 
 	// MAIN
 	api := g.Group("")
-	api.Use()
+	api.Use(middleware.RequestLogger(logger))
 	api.Use(gin.Recovery())
 
 	// TEAMS
 	teams := api.Group("")
-	teams.POST(createTeamPath, th.Create)
+	teams.POST(createTeamPath, th.Add)
 	teams.GET(getTeamPath, th.Get)
 
 	// USERS
