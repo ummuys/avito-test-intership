@@ -22,7 +22,7 @@ func (t *ts) Add(ctx context.Context, body models.AddTeamRequest) error {
 	return errs.ParsePgErr(t.db.AddTeam(ctx, body))
 }
 
-func (t *ts) Get(ctx context.Context, teamName string) ([][]any, error) {
-	mbrs, err := t.db.GetTeam(ctx, teamName)
-	return mbrs, errs.ParsePgErr(err)
+func (t *ts) Get(ctx context.Context, teamName string) (models.GetTeamResponse, error) {
+	team, err := t.db.GetTeam(ctx, teamName)
+	return team, errs.ParsePgErr(err)
 }

@@ -11,18 +11,20 @@ import (
 	"github.com/ummuys/avito-test-intership/internal/service"
 )
 
-type uh struct {
-	svc    service.UserService
+type adh struct {
 	logger *zerolog.Logger
+	srv    service.AdminService
 }
 
-func NewUserHandler(svc service.UserService, logger *zerolog.Logger) UserHandler {
-	return &uh{svc: svc, logger: logger}
+func NewAdminHandler(ads service.AdminService, logger *zerolog.Logger) AdminHandler {
+	return &adh{logger: logger, srv: ads}
 }
 
-func (u *uh) SetState(g *gin.Context) {
+func (ad *adh) CreateUser(g *gin.Context) {
+	ad.logger.Debug().Str("evt", "call CreateUser").Msg("")
 	ctx := g.Request.Context()
-	var req models.SetUserStateRequest
+
+	var req models.CreateUserRequest
 	if err := g.ShouldBindBodyWithJSON(&req); err != nil {
 		g.Set("msg", err.Error())
 		err := models.Error{
@@ -33,16 +35,15 @@ func (u *uh) SetState(g *gin.Context) {
 		return
 	}
 
-	username, teamName, err := u.svc.SetState(ctx, req.UserID, req.IsActive)
-	if err != nil {
+	if err := ad.srv.CreateUser(ctx, req.Username, req.Password, req.Role); err != nil {
 		g.Set("msg", err.Error())
 		switch {
-		case errors.Is(err, errs.ErrPGNotFound):
+		case errors.Is(err, errs.ErrPGDuplicate):
 			err := models.Error{
-				Code:    errs.ErrCodeNotFound,
-				Message: errs.ErrMsgNotFound,
+				Code:    errs.ErrCodeTeamExists,
+				Message: errs.ErrMsgTeamExists,
 			}
-			g.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponse{Error: err})
+			g.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{Error: err})
 		default:
 			err := models.Error{
 				Code:    errs.ErrCodeInternal,
@@ -53,16 +54,6 @@ func (u *uh) SetState(g *gin.Context) {
 		return
 	}
 
-	user := models.User{
-		UserID:   req.UserID,
-		Username: username,
-		TeamName: teamName,
-		IsActive: req.IsActive,
-	}
-	g.Set("msg", "user state changed")
-	g.JSON(http.StatusOK, models.SetUserStateResponse{User: user})
-}
-
-func (u *uh) Get(g *gin.Context) {
-
+	g.Set("msg", "user created")
+	g.JSON(http.StatusOK, models.CreateUserResponse{Username: req.Username, Role: req.Role})
 }

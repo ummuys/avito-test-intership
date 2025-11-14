@@ -64,6 +64,8 @@ func parseDBEnv(prefix string) (DBConfig, error) {
 	}, nil
 }
 
-func ParsePRDBEnv() (DBConfig, error)   { return parseDBEnv("PR_DB") }
-func ParseTeamDBEnv() (DBConfig, error) { return parseDBEnv("TEAM_DB") }
-func ParseUserDBEnv() (DBConfig, error) { return parseDBEnv("USER_DB") }
+func ParsePRDBEnv() (DBConfig, error)    { return parseDBEnv("PR_DB") }
+func ParseTeamDBEnv() (DBConfig, error)  { return parseDBEnv("TEAM_DB") }
+func ParseUserDBEnv() (DBConfig, error)  { return parseDBEnv("USER_DB") }
+func ParseAdminDBEnv() (DBConfig, error) { return parseDBEnv("ADMIN_DB") }
+func ParseAuthDBEnv() (DBConfig, error)  { return parseDBEnv("AUTH_DB") }

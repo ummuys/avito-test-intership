@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"github.com/ummuys/avito-test-intership/internal/service"
@@ -16,5 +18,5 @@ func NewServerHandler(svc service.ServerService, logger *zerolog.Logger) ServerH
 }
 
 func (s *sh) Health(g *gin.Context) {
-
+	g.JSON(http.StatusOK, gin.H{})
 }

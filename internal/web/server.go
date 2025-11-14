@@ -11,7 +11,7 @@ import (
 	"github.com/ummuys/avito-test-intership/internal/web/middleware"
 )
 
-func InitServer(hand di.Handlers, logger *zerolog.Logger) *http.Server {
+func InitServer(hand di.Handlers, sec di.Secure, logger *zerolog.Logger) *http.Server {
 	gin.SetMode(gin.ReleaseMode)
 	g := gin.New()
 
@@ -19,6 +19,13 @@ func InitServer(hand di.Handlers, logger *zerolog.Logger) *http.Server {
 	th := hand.TeamHandler
 	uh := hand.UserHandler
 	sh := hand.ServerHandler
+	auh := hand.AuthHandler
+	adh := hand.AdminHandler
+
+	tm := sec.TokenManager
+
+	//allUsers := []string{"admin", "user"}
+	onlyAdmin := []string{"admin"}
 
 	// MAIN
 	api := g.Group("")
@@ -27,13 +34,26 @@ func InitServer(hand di.Handlers, logger *zerolog.Logger) *http.Server {
 
 	// TEAMS
 	teams := api.Group("")
-	teams.POST(createTeamPath, th.Add)
+	teams.POST(createTeamPath, th.Create)
 	teams.GET(getTeamPath, th.Get)
 
 	// USERS
+	admUsers := api.Group("")
+	admUsers.Use(middleware.Auth(tm, onlyAdmin))
+	admUsers.POST(setUserActivePath, uh.SetState)
+
 	users := api.Group("")
-	users.POST(setUserActivePath, uh.SetState)
 	users.GET(getUserReviewPath, uh.Get)
+
+	// AUTH
+	auth := api.Group("")
+	auth.POST(authPath, auh.Authorization)
+	auth.GET(updateAccessToken, auh.UpdateAccessToken)
+
+	// ADMIN
+	adm := api.Group("")
+	adm.Use(middleware.Auth(tm, onlyAdmin))
+	adm.POST(createSvcUserPath, adh.CreateUser)
 
 	// PR
 	pr := api.Group("")

@@ -4,7 +4,10 @@ const (
 	// USER
 	UpdateUserStateQuery = `
 	UPDATE pr_review.users 
-	SET is_active = $1 where user_id = $2
+	SET 
+		is_active  = $1,
+		updated_at = NOW()
+	WHERE user_id = $2;
 	`
 
 	GetUserInfoQuery = `

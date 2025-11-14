@@ -27,7 +27,7 @@ func NewTeamDB(ctx context.Context, logger *zerolog.Logger) (TeamDB, error) {
 		return nil, err
 	}
 
-	pool, err := PoolFromConfig(dbctx, cfg, "report")
+	pool, err := PoolFromConfig(dbctx, cfg, "team")
 	if err != nil {
 		return nil, err
 	}
@@ -66,6 +66,7 @@ func (t *tDB) AddTeam(ctx context.Context, body models.AddTeamRequest) (err erro
 	sb := tx.SendBatch(dbCtx, b)
 	for i := 0; i < len(body.Members)+1; i++ {
 		if _, err = sb.Exec(); err != nil {
+			saveRawErr(t.logger, "AddUserQuery", err)
 			_ = sb.Close()
 			return err
 		}
@@ -82,37 +83,39 @@ func (t *tDB) AddTeam(ctx context.Context, body models.AddTeamRequest) (err erro
 	return nil
 }
 
-func (t *tDB) GetTeam(ctx context.Context, teamName string) ([][]any, error) {
-	t.logger.Debug().Str("evt", "call AddTeam").Msg("")
+func (t *tDB) GetTeam(ctx context.Context, teamName string) (models.GetTeamResponse, error) {
+	t.logger.Debug().Str("evt", "call GetTeam").Msg("")
 
 	dbCtx, cancel := context.WithTimeout(ctx, time.Second*2)
 	defer cancel()
 
 	rows, err := t.pool.Query(dbCtx, GetTeamQuery, teamName)
 	if err != nil {
-		return nil, err
+		saveRawErr(t.logger, "GetTeamQuery", err)
+		return models.GetTeamResponse{}, err
 	}
 
 	defer rows.Close()
 
-	var mbrs [][]any
+	var team models.GetTeamResponse
 	for rows.Next() {
-		vals, err := rows.Values()
+		var m models.Member
+		err := rows.Scan(&m.UserID, &m.Username, &m.IsActive)
 		if err != nil {
-			return nil, err
+			return models.GetTeamResponse{}, err
 		}
-		row := make([]any, len(vals))
-		copy(row, vals)
-		mbrs = append(mbrs, row)
-	}
-
-	if mbrs == nil {
-		return nil, pgx.ErrNoRows
+		team.Members = append(team.Members, m)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return models.GetTeamResponse{}, err
 	}
 
-	return mbrs, nil
+	if len(team.Members) == 0 {
+		return models.GetTeamResponse{}, pgx.ErrNoRows
+	}
+
+	team.TeamName = teamName
+
+	return team, nil
 }

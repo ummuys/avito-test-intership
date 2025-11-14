@@ -10,17 +10,17 @@ import (
 	"github.com/ummuys/avito-test-intership/internal/secure"
 )
 
-type as struct {
+type aus struct {
 	logger *zerolog.Logger
-	db     repository.AdminDB
+	db     repository.AuthDB
 	ph     secure.PasswordHasher
 }
 
-func NewAuthService(logger *zerolog.Logger, db repository.AdminDB, ph secure.PasswordHasher) AuthService {
-	return &as{logger: logger, db: db, ph: ph}
+func NewAuthService(db repository.AuthDB, ph secure.PasswordHasher, logger *zerolog.Logger) AuthService {
+	return &aus{logger: logger, db: db, ph: ph}
 }
 
-func (a *as) CheckCredentials(ctx context.Context, username, password string) (int64, string, error) {
+func (a *aus) CheckCredentials(ctx context.Context, username, password string) (int64, string, error) {
 	a.logger.Debug().Str("evt", "call CheckCredentials").Msg("")
 
 	user_id, role, hashPass, err := a.db.CheckCredentials(ctx, username)
@@ -28,7 +28,7 @@ func (a *as) CheckCredentials(ctx context.Context, username, password string) (i
 		return 0, "", errs.ParsePgErr(err)
 	}
 
-	if !u.ph.CheckHash(password, hashPass) {
+	if !a.ph.CheckHash(password, hashPass) {
 		return 0, "", errors.New(errs.ErrCodeInvalidTeamName)
 	}
 

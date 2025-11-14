@@ -22,14 +22,14 @@ services:
       - .env
     environment:
       POSTGRES_DB: ${PR_DB_NAME}
-      POSTGRES_USER: ${PR_DB_USER}
+      POSTGRES_USER: ${PR_DB_USERNAME}
       POSTGRES_PASSWORD: ${PR_DB_PASSWORD}
     ports:
       - "${PR_DB_PORT_OUT}:${PR_DB_PORT_IN}"
     volumes:
       - db-pr-data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${PR_DB_USER} -d ${PR_DB_NAME}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${PR_DB_USERNAME} -d ${PR_DB_NAME}" ]
       interval: 1s
       timeout: 1s
       retries: 5
@@ -41,9 +41,43 @@ services:
       db-pr:
         condition: service_healthy
     volumes:
-      - ./migrations:/migrations
+      - ./migrations/pr:/migrations
     command: ["-path", "/migrations", "-database", "${PR_DB_URL}", "up"]
+    restart: "no"
+
+  
+
+  db-accounts:
+    image: postgres:17
+    container_name: db-accounts
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${ACCOUNTS_DB_NAME}
+      POSTGRES_USER: ${ACCOUNTS_DB_USERNAME}
+      POSTGRES_PASSWORD: ${ACCOUNTS_DB_PASSWORD}
+    ports:
+      - "${ACCOUNTS_DB_PORT_OUT}:${ACCOUNTS_DB_PORT_IN}"
+    volumes:
+      - db-accounts-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${ACCOUNTS_DB_USERNAME} -d ${ACCOUNTS_DB_NAME}" ]
+      interval: 1s
+      timeout: 1s
+      retries: 5
+
+  db-accounts-migs:
+    image: migrate/migrate:latest
+    container_name: db-accounts-migs
+    depends_on:
+      db-accounts:
+        condition: service_healthy
+    volumes:
+      - ./migrations/accounts:/migrations
+    command: ["-path", "/migrations", "-database", "${ACCOUNTS_DB_URL}", "up"]
     restart: "no"
 
 volumes:
   db-pr-data:
+  db-accounts-data:

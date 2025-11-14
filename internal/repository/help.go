@@ -2,10 +2,13 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/zerolog"
 	"github.com/ummuys/avito-test-intership/internal/config"
 )
 
@@ -38,4 +41,19 @@ func PoolFromConfig(ctx context.Context, config config.DBConfig, dbName string) 
 		return nil, fmt.Errorf("%s_db didn't pinged: %w", dbName, err)
 	}
 	return conn, nil
+}
+
+func saveRawErr(logger *zerolog.Logger, queryName string, err error) {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		msg := fmt.Sprintf("%s failed", queryName)
+		logger.Error().
+			Str("pg_code", pgErr.Code).
+			Str("pg_message", pgErr.Message).
+			Str("pg_detail", pgErr.Detail).
+			Msg(msg)
+	} else {
+		msg := fmt.Sprintf("%s failed (non pg error)", queryName)
+		logger.Error().Err(err).Msg(msg)
+	}
 }

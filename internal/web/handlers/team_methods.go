@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -25,7 +24,7 @@ func parseAddTeamRequest() {
 
 }
 
-func (t *th) Add(g *gin.Context) {
+func (t *th) Create(g *gin.Context) {
 	ctx := g.Request.Context()
 	var req models.AddTeamRequest
 	if err := g.ShouldBindBodyWithJSON(&req); err != nil {
@@ -73,7 +72,7 @@ func (t *th) Get(g *gin.Context) {
 		return
 	}
 
-	mbrs, err := t.svc.Get(ctx, teamName)
+	team, err := t.svc.Get(ctx, teamName)
 	if err != nil {
 		g.Set("msg", err.Error())
 		switch {
@@ -93,55 +92,7 @@ func (t *th) Get(g *gin.Context) {
 		return
 	}
 
-	badData := false
-	badMID := 0
-	resp := models.GetTeamResponse{TeamName: teamName}
-	resp.Members = make([]models.Member, len(mbrs))
-
-	for i, m := range mbrs {
-
-		userID, ok := m[0].(string)
-		if !ok {
-			badMID = i
-			badData = true
-			break
-		}
-
-		username, ok := m[1].(string)
-		if !ok {
-			badMID = i
-			badData = true
-			break
-		}
-
-		isActive, ok := m[2].(bool)
-		if !ok {
-			badMID = i
-			badData = true
-			break
-		}
-
-		resp.Members[i] = models.Member{
-			UserID:   userID,
-			Username: username,
-			IsActive: isActive,
-		}
-
-	}
-
-	if badData {
-		msg := fmt.Sprintf("can't convert field/s of models.User into go type {mbrs[%d] = %v}",
-			badMID, mbrs[badMID])
-		g.Set("msg", msg)
-		err := models.Error{
-			Code:    errs.ErrCodeInternal,
-			Message: errs.ErrMsgInternal,
-		}
-		g.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{Error: err})
-		return
-	}
-
 	g.Set("msg", "team returned")
-	g.JSON(http.StatusOK, resp)
+	g.JSON(http.StatusOK, team)
 
 }

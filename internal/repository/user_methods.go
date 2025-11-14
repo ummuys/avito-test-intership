@@ -23,7 +23,7 @@ func NewUserDB(ctx context.Context, logger *zerolog.Logger) (UserDB, error) {
 		return nil, err
 	}
 
-	pool, err := PoolFromConfig(dbctx, cfg, "report")
+	pool, err := PoolFromConfig(dbctx, cfg, "user")
 	if err != nil {
 		return nil, err
 	}
@@ -38,6 +38,7 @@ func (u *uDB) SetUserState(ctx context.Context, userID string, state bool) (stri
 
 	_, err := u.pool.Exec(dbCtx, UpdateUserStateQuery, state, userID)
 	if err != nil {
+		saveRawErr(u.logger, "UpdateUserStateQuery", err)
 		return "", "", err
 	}
 
@@ -46,8 +47,9 @@ func (u *uDB) SetUserState(ctx context.Context, userID string, state bool) (stri
 		teamName string
 	)
 
-	err = u.pool.QueryRow(ctx, GetUserInfoQuery, userID).Scan(&username, &teamName)
+	err = u.pool.QueryRow(dbCtx, GetUserInfoQuery, userID).Scan(&username, &teamName)
 	if err != nil {
+		saveRawErr(u.logger, "GetUserInfoQuery", err)
 		return "", "", err
 	}
 
