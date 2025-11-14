@@ -60,10 +60,43 @@ func (p *prh) Create(g *gin.Context) {
 	}
 
 	g.Set("msg", "pull_request created")
-	g.JSON(http.StatusOK, models.CreatePRResponse{PR: pr})
+	g.JSON(http.StatusOK, models.CreatePRWrapper{PR: pr})
 }
 
 func (p *prh) Merge(g *gin.Context) {
+	ctx := g.Request.Context()
+	var req models.MergePRRequest
+	if err := g.ShouldBindBodyWithJSON(&req); err != nil {
+		g.Set("msg", err.Error())
+		err := models.Error{
+			Code:    errs.ErrCodeBadJSON,
+			Message: errs.ErrMsgBadJSON,
+		}
+		g.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{Error: err})
+		return
+	}
+
+	pr, err := p.svc.Merge(ctx, req.PRID)
+	if err != nil {
+		g.Set("msg", err.Error())
+		switch {
+		case errors.Is(err, errs.ErrPGNotFound):
+			err := models.Error{
+				Code:    errs.ErrCodeNotFound,
+				Message: errs.ErrMsgNotFound,
+			}
+			g.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{Error: err})
+		default:
+			err := models.Error{
+				Code:    errs.ErrCodeInternal,
+				Message: errs.ErrMsgInternal,
+			}
+			g.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{Error: err})
+		}
+		return
+	}
+	g.Set("msg", "pull_request merged")
+	g.JSON(http.StatusOK, models.MergeRPWrapper{PR: pr})
 
 }
 

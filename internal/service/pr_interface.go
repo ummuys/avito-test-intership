@@ -8,6 +8,6 @@ import (
 
 type PRService interface {
 	Create(ctx context.Context, prID, prName, authorID string) (models.PRResponse, error)
-	Merge()
+	Merge(ctx context.Context, prID string) (models.MergeRPResponse, error)
 	Reassign()
 }

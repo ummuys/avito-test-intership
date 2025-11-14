@@ -50,7 +50,7 @@ func (t *tDB) AddTeam(ctx context.Context, body models.AddTeamRequest) (err erro
 
 	defer func() {
 		if err != nil {
-			if rbErr := tx.Rollback(ctx); rbErr != nil && !errors.Is(rbErr, pgx.ErrTxClosed) {
+			if rbErr := tx.Rollback(dbCtx); rbErr != nil && !errors.Is(rbErr, pgx.ErrTxClosed) {
 				t.logger.Error().Err(rbErr).Msg("rollback failed")
 			}
 		}
@@ -76,7 +76,7 @@ func (t *tDB) AddTeam(ctx context.Context, body models.AddTeamRequest) (err erro
 		return
 	}
 
-	if err = tx.Commit(ctx); err != nil {
+	if err = tx.Commit(dbCtx); err != nil {
 		return
 	}
 

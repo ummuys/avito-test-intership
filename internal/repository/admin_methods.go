@@ -33,9 +33,9 @@ func NewAdminDB(ctx context.Context, logger *zerolog.Logger) (AdminDB, error) {
 	return &adDB{pool: pool, logger: logger}, nil
 }
 
-func (ad *adDB) CreateUser(pCtx context.Context, username string, hashPassword string, role string) (err error) {
+func (ad *adDB) CreateUser(ctx context.Context, username string, hashPassword string, role string) (err error) {
 	ad.logger.Debug().Str("evt", "call CreateUser").Msg("")
-	ctx, cancel := context.WithTimeout(pCtx, time.Second*2)
+	dbCtx, cancel := context.WithTimeout(ctx, time.Second*2)
 	defer cancel()
 
 	var tx pgx.Tx
@@ -46,25 +46,25 @@ func (ad *adDB) CreateUser(pCtx context.Context, username string, hashPassword s
 
 	defer func() {
 		if err != nil {
-			if rbErr := tx.Rollback(ctx); rbErr != nil && !errors.Is(rbErr, pgx.ErrTxClosed) {
+			if rbErr := tx.Rollback(dbCtx); rbErr != nil && !errors.Is(rbErr, pgx.ErrTxClosed) {
 				ad.logger.Error().Err(rbErr).Msg("rollback failed")
 			}
 		}
 	}()
 
-	_, err = tx.Exec(ctx, NewUserStep1, username, hashPassword)
+	_, err = tx.Exec(dbCtx, NewUserStep1, username, hashPassword)
 	if err != nil {
 		saveRawErr(ad.logger, "NewUserStep1", err)
 		return
 	}
 
-	_, err = tx.Exec(ctx, NewUserStep2, username, role)
+	_, err = tx.Exec(dbCtx, NewUserStep2, username, role)
 	if err != nil {
 		saveRawErr(ad.logger, "NewUserStep2", err)
 		return
 	}
 
-	if err = tx.Commit(ctx); err != nil {
+	if err = tx.Commit(dbCtx); err != nil {
 		return
 	}
 
@@ -73,10 +73,10 @@ func (ad *adDB) CreateUser(pCtx context.Context, username string, hashPassword s
 
 func (ad *adDB) ValidateRole(ctx context.Context, role string) error {
 	ad.logger.Debug().Str("evt", "call CheckRole").Msg("")
-	ctx, cancel := context.WithTimeout(ctx, time.Second*2)
+	dbCtx, cancel := context.WithTimeout(ctx, time.Second*2)
 	defer cancel()
 
-	_, err := ad.pool.Exec(ctx, CheckRole, role)
+	_, err := ad.pool.Exec(dbCtx, CheckRole, role)
 	if err != nil {
 		saveRawErr(ad.logger, "CheckRole", err)
 	}

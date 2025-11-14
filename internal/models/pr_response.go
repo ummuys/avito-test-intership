@@ -1,19 +1,8 @@
 package models
 
-// {
-//   "pr": {
-//     "pull_request_id": "pr-1001",
-//     "pull_request_name": "Add search",
-//     "author_id": "u1",
-//     "status": "OPEN",
-//     "assigned_reviewers": [
-//       "u2",
-//       "u3"
-//     ]
-//   }
-// }
+import "time"
 
-type CreatePRResponse struct {
+type CreatePRWrapper struct {
 	PR PRResponse `json:"pr"`
 }
 
@@ -23,4 +12,12 @@ type PRResponse struct {
 	AuthorID          string   `json:"author_id"`
 	Status            string   `json:"status"`
 	AssignedReviewers []string `json:"assigned_reviewers"`
+}
+
+type MergeRPResponse struct {
+	PRResponse
+	MergeAt time.Time `json:"mergedAt"`
+}
+type MergeRPWrapper struct {
+	PR MergeRPResponse `json:"pr"`
 }

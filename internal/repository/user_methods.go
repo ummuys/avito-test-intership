@@ -18,7 +18,7 @@ func NewUserDB(ctx context.Context, logger *zerolog.Logger) (UserDB, error) {
 	dbctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	cfg, err := config.ParseTeamDBEnv()
+	cfg, err := config.ParseUserDBEnv()
 	if err != nil {
 		return nil, err
 	}

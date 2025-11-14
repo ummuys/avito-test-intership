@@ -19,12 +19,13 @@ func NewPRService(db repository.PRDB, logger *zerolog.Logger) PRService {
 }
 
 func (p *prs) Create(ctx context.Context, prID, prName, authorID string) (models.PRResponse, error) {
-	pr, err := p.db.CreatePR(ctx, prID, prName, authorID)
+	pr, err := p.db.Create(ctx, prID, prName, authorID)
 	return pr, errs.ParsePgErr(err)
 }
 
-func (p *prs) Merge() {
-
+func (p *prs) Merge(ctx context.Context, prID string) (models.MergeRPResponse, error) {
+	pr, err := p.db.Merge(ctx, prID)
+	return pr, errs.ParsePgErr(err)
 }
 
 func (p *prs) Reassign() {

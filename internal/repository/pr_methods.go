@@ -36,7 +36,7 @@ func NewPRDB(ctx context.Context, logger *zerolog.Logger) (PRDB, error) {
 
 func (p *prDB) GetReview() {}
 
-func (p *prDB) CreatePR(ctx context.Context, prID, prName, authorID string) (resp models.PRResponse, err error) {
+func (p *prDB) Create(ctx context.Context, prID, prName, authorID string) (resp models.PRResponse, err error) {
 	p.logger.Debug().Str("evt", "call CreatePR").Msg("")
 	dbCtx, cancel := context.WithTimeout(ctx, time.Second*1)
 	defer cancel()
@@ -69,7 +69,6 @@ func (p *prDB) CreatePR(ctx context.Context, prID, prName, authorID string) (res
 		saveRawErr(p.logger, "CreatePRStep2", err)
 		return
 	}
-	defer rows.Close()
 
 	for rows.Next() {
 		var r string
@@ -84,6 +83,23 @@ func (p *prDB) CreatePR(ctx context.Context, prID, prName, authorID string) (res
 		return
 	}
 
+	rows.Close()
+
+	b := &pgx.Batch{}
+	for i, r := range rews {
+		b.Queue(CreatePRStep3, prID, r, i+1)
+	}
+
+	sb := tx.SendBatch(dbCtx, b)
+	for i := 0; i < len(rews); i++ {
+		if _, err = sb.Exec(); err != nil {
+			saveRawErr(p.logger, "CreatePRStep3", err)
+			_ = sb.Close()
+			return
+		}
+	}
+	sb.Close()
+
 	if err = tx.Commit(ctx); err != nil {
 		return
 	}
@@ -92,10 +108,86 @@ func (p *prDB) CreatePR(ctx context.Context, prID, prName, authorID string) (res
 	resp.AuthorID = authorID
 	resp.PRName = prName
 	resp.Status = "OPEN"
-	resp.AssignedReviewers = append(resp.AssignedReviewers, rews...)
+	if len(rews) != 0 {
+		resp.AssignedReviewers = append(resp.AssignedReviewers, rews...)
+	}
 
 	return resp, nil
 
 }
-func (p *prDB) MarkPRAsMerge() {}
-func (p *prDB) ReassignPR()    {}
+func (p *prDB) Merge(ctx context.Context, prID string) (resp models.MergeRPResponse, err error) {
+	p.logger.Debug().Str("evt", "call CreatePR").Msg("")
+	dbCtx, cancel := context.WithTimeout(ctx, time.Second*1)
+	defer cancel()
+
+	var tx pgx.Tx
+	tx, err = p.pool.Begin(dbCtx)
+	if err != nil {
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(dbCtx); rbErr != nil && !errors.Is(rbErr, pgx.ErrTxClosed) {
+				p.logger.Error().Err(rbErr).Msg("rollback failed")
+			}
+		}
+	}()
+
+	var status string
+	err = tx.QueryRow(dbCtx, CheckIsPRMerge, prID).Scan(&status)
+	if status != "MERGED" {
+
+		_, err = tx.Exec(dbCtx, MergePRStep1, prID)
+		if err != nil {
+			saveRawErr(p.logger, "CreatePRStep1", err)
+			return models.MergeRPResponse{}, err
+		}
+
+	}
+
+	var (
+		prName   string
+		authorID string
+		mergedAt time.Time
+	)
+
+	err = tx.QueryRow(dbCtx, MergePRStep2, prID).Scan(&prName, &authorID, &mergedAt)
+	if err != nil {
+		return
+	}
+
+	var rows pgx.Rows
+	rows, err = tx.Query(dbCtx, MergePRStep3, prID)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	rews := make([]string, 0, 2)
+	for rows.Next() {
+		var r string
+		rows.Scan(&r)
+		rews = append(rews, r)
+	}
+
+	if rows.Err() != nil {
+		return
+	}
+
+	if err = tx.Commit(dbCtx); err != nil {
+		return
+	}
+
+	resp.PRID = prID
+	resp.PRName = prName
+	resp.AuthorID = authorID
+	resp.Status = "MERGED"
+	resp.MergeAt = mergedAt
+	if len(rews) != 0 {
+		resp.AssignedReviewers = append(resp.AssignedReviewers, rews...)
+	}
+
+	return resp, nil
+}
+func (p *prDB) ReassignPR() {}
