@@ -7,6 +7,9 @@ service-up:
 service-down:
 	-docker compose down
 
+service-logs:
+	-docker logs pr-service
+
 
 update-image:
 	-docker compose down 
