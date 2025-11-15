@@ -10,8 +10,8 @@ const (
 	getUserReviewPath = "/users/getReview"   // +
 
 	// Pull requests
-	createPRPath   = "/pullRequest/create"
-	mergePRPath    = "/pullRequest/merge"
+	createPRPath   = "/pullRequest/create" // +
+	mergePRPath    = "/pullRequest/merge"  // +
 	reassignPRPath = "/pullRequest/reassign"
 
 	// Auth

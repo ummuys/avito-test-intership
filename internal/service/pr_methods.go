@@ -28,6 +28,7 @@ func (p *prs) Merge(ctx context.Context, prID string) (models.MergeRPResponse, e
 	return pr, errs.ParsePgErr(err)
 }
 
-func (p *prs) Reassign() {
-
+func (p *prs) Reassign(ctx context.Context, prID, oldUserID string) (models.ReassignPRResponse, error) {
+	pr, err := p.db.ReassignPR(ctx, prID, oldUserID)
+	return pr, errs.ParsePgErr(err)
 }

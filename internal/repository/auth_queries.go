@@ -1,5 +1,6 @@
 package repository
 
+// #nosec G101 -- SQL query, not hardcoded password
 const GetCredentials = `
 SELECT 
     u.user_id,

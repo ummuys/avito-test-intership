@@ -21,3 +21,12 @@ type MergeRPResponse struct {
 type MergeRPWrapper struct {
 	PR MergeRPResponse `json:"pr"`
 }
+
+type ReassignRPWrapper struct {
+	PR ReassignPRResponse `json:"pr"`
+}
+
+type ReassignPRResponse struct {
+	PRResponse
+	ReplacedBy string `json:"replaced_by"`
+}

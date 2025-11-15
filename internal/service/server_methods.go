@@ -14,5 +14,4 @@ func NewServerService(db repository.PRDB, logger *zerolog.Logger) ServerService 
 }
 
 func (s *ss) Health() {
-
 }

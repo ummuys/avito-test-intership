@@ -8,17 +8,16 @@ import (
 	"github.com/ummuys/avito-test-intership/internal/config"
 )
 
-var cfg config.TMConfig
-
-type tokMan struct{}
+type tokMan struct {
+	config config.TMConfig
+}
 
 func NewTokenManager() (TokenManager, error) {
 	c, err := config.ParseTMConfig()
 	if err != nil {
 		return nil, err
 	}
-	cfg = c
-	return &tokMan{}, nil
+	return &tokMan{config: c}, nil
 }
 
 func (tm *tokMan) GenerateRefreshToken(user_id int64, role string) (string, error) {
@@ -26,14 +25,18 @@ func (tm *tokMan) GenerateRefreshToken(user_id int64, role string) (string, erro
 		UserID: user_id,
 		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(cfg.RefreshTokenLimit)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tm.config.RefreshTokenLimit)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Issuer:    "rp-service-token-manager",
 			Audience:  []string{"rp-service-user"},
 		},
 	}
 	refresh := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-	return refresh.SignedString([]byte(cfg.RefreshSecret))
+	return refresh.SignedString([]byte(tm.config.RefreshSecret))
+}
+
+func (tm *tokMan) GetConfiguration() config.TMConfig {
+	return tm.config
 }
 
 func (tm *tokMan) GenerateAccessToken(user_id int64, role string) (string, error) {
@@ -41,18 +44,18 @@ func (tm *tokMan) GenerateAccessToken(user_id int64, role string) (string, error
 		UserID: user_id,
 		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(cfg.AccessTokenLimit)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tm.config.AccessTokenLimit)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Issuer:    "rp-service-token-manager",
 			Audience:  []string{"rp-service-user"},
 		},
 	}
 	access := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-	return access.SignedString([]byte(cfg.AccessSecret))
+	return access.SignedString([]byte(tm.config.AccessSecret))
 }
 
 func (tm *tokMan) ValidateAccessToken(rawToken string) (AccessClaims, error) {
-	token, claims, err := unhashAccessToken(rawToken)
+	token, claims, err := tm.unhashAccessToken(rawToken)
 	if err != nil {
 		return AccessClaims{}, err
 	}
@@ -63,7 +66,7 @@ func (tm *tokMan) ValidateAccessToken(rawToken string) (AccessClaims, error) {
 }
 
 func (tm *tokMan) ValidateRefreshToken(rawToken string) (RefreshClaims, error) {
-	token, claims, err := unhashRefreshToken(rawToken)
+	token, claims, err := tm.unhashRefreshToken(rawToken)
 	if err != nil {
 		return RefreshClaims{}, err
 	}
@@ -73,24 +76,24 @@ func (tm *tokMan) ValidateRefreshToken(rawToken string) (RefreshClaims, error) {
 	return claims, err
 }
 
-func unhashAccessToken(token string) (*jwt.Token, AccessClaims, error) {
+func (tm *tokMan) unhashAccessToken(token string) (*jwt.Token, AccessClaims, error) {
 	var claims AccessClaims
 	jwtToken, err := jwt.ParseWithClaims(token, &claims, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method")
 		}
-		return []byte(cfg.AccessSecret), nil
+		return []byte(tm.config.AccessSecret), nil
 	})
 	return jwtToken, claims, err
 }
 
-func unhashRefreshToken(token string) (*jwt.Token, RefreshClaims, error) {
+func (tm *tokMan) unhashRefreshToken(token string) (*jwt.Token, RefreshClaims, error) {
 	var claims RefreshClaims
 	jwtToken, err := jwt.ParseWithClaims(token, &claims, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method")
 		}
-		return []byte(cfg.RefreshSecret), nil
+		return []byte(tm.config.RefreshSecret), nil
 	})
 	return jwtToken, claims, err
 }

@@ -56,9 +56,11 @@ func InitServices(rep Repositories, sec Secure, logger *zerolog.Logger) Services
 	us := service.NewUserService(rep.UserDB, logger)
 	aus := service.NewAuthService(rep.AuthDB, sec.PasswordHasher, logger)
 	ads := service.NewAdminService(rep.AdminDB, sec.PasswordHasher, logger)
-	return Services{PRService: prs, ServerService: ss,
+	return Services{
+		PRService: prs, ServerService: ss,
 		TeamService: ts, UserService: us,
-		AdminService: ads, AuthService: aus}
+		AdminService: ads, AuthService: aus,
+	}
 }
 
 func InitSecure() (Secure, error) {
@@ -77,7 +79,9 @@ func InitHandlers(svc Services, sec Secure, logger *zerolog.Logger) Handlers {
 	uh := handlers.NewUserHandler(svc.UserService, logger)
 	auh := handlers.NewAuthHandler(sec.TokenManager, svc.AuthService, logger)
 	adh := handlers.NewAdminHandler(svc.AdminService, logger)
-	return Handlers{PRHandler: prh, ServerHandler: sh,
+	return Handlers{
+		PRHandler: prh, ServerHandler: sh,
 		TeamHandler: th, UserHandler: uh,
-		AdminHandler: adh, AuthHandler: auh}
+		AdminHandler: adh, AuthHandler: auh,
+	}
 }

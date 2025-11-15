@@ -9,3 +9,8 @@ type CreatePRRequest struct {
 type MergePRRequest struct {
 	PRID string `json:"pull_request_id"`
 }
+
+type ReassignPRRequest struct {
+	PRID      string `json:"pull_request_id"`
+	OldUserID string `json:"old_user_id"`
+}

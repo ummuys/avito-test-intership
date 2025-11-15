@@ -3,7 +3,7 @@ CREATE TYPE pr_review.pr_status AS ENUM ('OPEN', 'MERGED');
 CREATE TABLE IF NOT EXISTS pr_review.pull_requests (
     pr_id              TEXT       PRIMARY KEY,
     pr_name           TEXT        NOT NULL,
-    author_id       TEXT        NOT NULL REFERENCES pr_review.users(user_id),
+    author_id       TEXT        NOT NULL REFERENCES pr_review.users(user_id) ON DELETE CASCADE,
     status          pr_review.pr_status NOT NULL DEFAULT 'OPEN',
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),

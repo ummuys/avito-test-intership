@@ -48,7 +48,7 @@ func main() {
 	if err := svc.AdminService.CreateUser(ctx, appConf.Username, appConf.Password, "admin"); err == nil || errors.Is(err, errs.ErrPGDuplicate) {
 		tools.Logger.DbLog.Info().Msg("default admin user initialized")
 	} else {
-		tools.Logger.DbLog.Error().Err(err).Msg("failed to init admin user")
+		tools.Logger.DbLog.Fatal().Err(err).Msg("failed to init admin user")
 	}
 
 	// SYNC TOOLS
@@ -57,7 +57,11 @@ func main() {
 
 	wg.Go(func() {
 		<-ctx.Done()
-		defer srv.Close()
+		defer func() {
+			if err := srv.Close(); err != nil {
+				appLogger.Error().Err(err).Msg("failed to close http server")
+			}
+		}()
 		srvCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		errch <- srv.Shutdown(srvCtx)
@@ -83,5 +87,4 @@ func main() {
 	} else {
 		tools.Logger.AppLog.Info().Msg("Shutdown successful")
 	}
-
 }

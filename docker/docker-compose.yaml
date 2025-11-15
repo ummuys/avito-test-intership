@@ -8,10 +8,12 @@ services:
     ports:
       - 8080:8080
     env_file:
-    - ../environment/.env.example
+    - ../environment/.env
     depends_on:
       db-pr-migs:
         condition: service_completed_successfully
+      db-accounts-migs:
+        condition:  service_completed_successfully
 
 
   db-pr:

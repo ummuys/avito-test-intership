@@ -60,7 +60,7 @@ func (p *prh) Create(g *gin.Context) {
 	}
 
 	g.Set("msg", "pull_request created")
-	g.JSON(http.StatusOK, models.CreatePRWrapper{PR: pr})
+	g.JSON(http.StatusCreated, models.CreatePRWrapper{PR: pr})
 }
 
 func (p *prh) Merge(g *gin.Context) {
@@ -86,6 +86,12 @@ func (p *prh) Merge(g *gin.Context) {
 				Message: errs.ErrMsgNotFound,
 			}
 			g.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{Error: err})
+		case errors.Is(err, errs.ErrNotEnoughReviewers):
+			err := models.Error{
+				Code:    errs.ErrCodeNotEnoughReviewers,
+				Message: errs.ErrMsgNotEnoughReviewers,
+			}
+			g.AbortWithStatusJSON(http.StatusConflict, models.ErrorResponse{Error: err})
 		default:
 			err := models.Error{
 				Code:    errs.ErrCodeInternal,
@@ -97,9 +103,60 @@ func (p *prh) Merge(g *gin.Context) {
 	}
 	g.Set("msg", "pull_request merged")
 	g.JSON(http.StatusOK, models.MergeRPWrapper{PR: pr})
-
 }
 
 func (p *prh) Reassign(g *gin.Context) {
+	ctx := g.Request.Context()
+	var req models.ReassignPRRequest
+	if err := g.ShouldBindBodyWithJSON(&req); err != nil {
+		g.Set("msg", err.Error())
+		err := models.Error{
+			Code:    errs.ErrCodeBadJSON,
+			Message: errs.ErrMsgBadJSON,
+		}
+		g.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{Error: err})
+		return
+	}
 
+	pr, err := p.svc.Reassign(ctx, req.PRID, req.OldUserID)
+	if err != nil {
+		g.Set("msg", err.Error())
+		switch {
+		case errors.Is(err, errs.ErrPGNotFound):
+			err := models.Error{
+				Code:    errs.ErrCodeNotFound,
+				Message: errs.ErrMsgNotFound,
+			}
+			g.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{Error: err})
+		case errors.Is(err, errs.ErrPRMerged):
+			err := models.Error{
+				Code:    errs.ErrCodePRMerged,
+				Message: errs.ErrMsgPRMerged,
+			}
+			g.AbortWithStatusJSON(http.StatusConflict, models.ErrorResponse{Error: err})
+		case errors.Is(err, errs.ErrRVNotAssigned):
+			err := models.Error{
+				Code:    errs.ErrCodeRVNotAssigned,
+				Message: errs.ErrMsgRVNotAssigned,
+			}
+			g.AbortWithStatusJSON(http.StatusConflict, models.ErrorResponse{Error: err})
+		case errors.Is(err, errs.ErrNoCandidate):
+			err := models.Error{
+				Code:    errs.ErrCodeNoCandidate,
+				Message: errs.ErrMsgNoCandidate,
+			}
+			g.AbortWithStatusJSON(http.StatusConflict, models.ErrorResponse{Error: err})
+		default:
+			err := models.Error{
+				Code:    errs.ErrCodeInternal,
+				Message: errs.ErrMsgInternal,
+			}
+			g.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{Error: err})
+		}
+
+		return
+	}
+
+	g.Set("msg", "reassigned pull_request")
+	g.JSON(http.StatusOK, models.ReassignRPWrapper{PR: pr})
 }

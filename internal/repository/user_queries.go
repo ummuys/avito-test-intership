@@ -23,4 +23,20 @@ const (
 	WHERE 
 		u.user_id = $1
 	`
+
+	GetReviewsQuery = `
+	SELECT 
+		pr.pr_id,
+	 	pr.pr_name,
+		pr.author_id,
+	 	pr.status
+	FROM
+		pr_review.pull_requests as pr
+	JOIN
+		pr_review.pull_request_reviewers as pr_r
+	ON
+		pr.pr_id = pr_r.pr_id
+	WHERE 
+		reviewer_id = $1
+	`
 )

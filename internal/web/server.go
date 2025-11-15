@@ -4,8 +4,10 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/rs/zerolog"
 	"github.com/ummuys/avito-test-intership/internal/di"
 	"github.com/ummuys/avito-test-intership/internal/web/middleware"
@@ -14,6 +16,12 @@ import (
 func InitServer(hand di.Handlers, sec di.Secure, logger *zerolog.Logger) *http.Server {
 	gin.SetMode(gin.ReleaseMode)
 	g := gin.New()
+
+	// Эта комманда нужно для строго парса запросов. Если в будущем
+	// в полях запроса будут необязательные поля, то этот флаг
+	// нужно будет убрать и заменить на binding:"required",
+	// подставив его к нужным полям
+	binding.EnableDecoderDisallowUnknownFields = true
 
 	prh := hand.PRHandler
 	th := hand.TeamHandler
@@ -24,46 +32,56 @@ func InitServer(hand di.Handlers, sec di.Secure, logger *zerolog.Logger) *http.S
 
 	tm := sec.TokenManager
 
-	//allUsers := []string{"admin", "user"}
+	allUsers := []string{"admin", "user"}
 	onlyAdmin := []string{"admin"}
+
+	// ------- GROUPS  -------
 
 	// MAIN
 	api := g.Group("")
 	api.Use(middleware.RequestLogger(logger))
 	api.Use(gin.Recovery())
 
+	// ALL USERS
+	publicGroup := api.Group("")
+
+	// ONLY AUTH USERS
+	authGroup := api.Group("")
+	authGroup.Use(middleware.Auth(tm, allUsers))
+
+	// ONLY ADMINS
+	adminGroup := api.Group("")
+	adminGroup.Use(middleware.Auth(tm, onlyAdmin))
+
+	// ------- PUBLIC GROUP -------
 	// TEAMS
-	teams := api.Group("")
-	teams.POST(createTeamPath, th.Create)
-	teams.GET(getTeamPath, th.Get)
+	publicGroup.POST(createTeamPath, th.Create)
 
-	// USERS
-	admUsers := api.Group("")
-	admUsers.Use(middleware.Auth(tm, onlyAdmin))
-	admUsers.POST(setUserActivePath, uh.SetState)
-
-	users := api.Group("")
-	users.GET(getUserReviewPath, uh.Get)
+	// SERVER
+	publicGroup.GET(healthPath, sh.Health)
 
 	// AUTH
-	auth := api.Group("")
-	auth.POST(authPath, auh.Authorization)
-	auth.GET(updateAccessToken, auh.UpdateAccessToken)
+	publicGroup.POST(authPath, auh.Authorization)
+	publicGroup.GET(updateAccessToken, auh.UpdateAccessToken)
 
-	// ADMIN
-	adm := api.Group("")
-	adm.Use(middleware.Auth(tm, onlyAdmin))
-	adm.POST(createSvcUserPath, adh.CreateUser)
+	// ------- AUTH GROUP  -------
+	// TEAMS
+	authGroup.GET(getTeamPath, th.Get)
+
+	// USERS
+	authGroup.GET(getUserReviewPath, uh.GetReviews)
+
+	// ------- ADMIN GROUP -------
+	//USERS
+	adminGroup.POST(setUserActivePath, uh.SetState)
 
 	// PR
-	pr := api.Group("")
-	pr.POST(createPRPath, prh.Create)
-	pr.POST(mergePRPath, prh.Merge)
-	pr.POST(reassignPRPath, prh.Reassign)
+	adminGroup.POST(createPRPath, prh.Create)
+	adminGroup.POST(mergePRPath, prh.Merge)
+	adminGroup.POST(reassignPRPath, prh.Reassign)
 
-	//SERVER
-	srv := api.Group("")
-	srv.GET(healthPath, sh.Health)
+	// ADMIN
+	adminGroup.POST(createSvcUserPath, adh.CreateUser)
 
 	host := os.Getenv("SERVER_IP")
 	port := os.Getenv("SERVER_PORT")
@@ -72,8 +90,12 @@ func InitServer(hand di.Handlers, sec di.Secure, logger *zerolog.Logger) *http.S
 	}
 
 	server := &http.Server{
-		Addr:    net.JoinHostPort(host, port),
-		Handler: g,
+		Addr:              net.JoinHostPort(host, port),
+		Handler:           g,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	return server

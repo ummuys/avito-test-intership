@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/ummuys/avito-test-intership/internal/config"
+	"github.com/ummuys/avito-test-intership/internal/models"
 )
 
 type uDB struct {
@@ -32,7 +33,7 @@ func NewUserDB(ctx context.Context, logger *zerolog.Logger) (UserDB, error) {
 }
 
 func (u *uDB) SetUserState(ctx context.Context, userID string, state bool) (string, string, error) {
-	u.logger.Debug().Str("evt", "call AddTeam").Msg("")
+	u.logger.Debug().Str("evt", "call GetReview").Msg("")
 	dbCtx, cancel := context.WithTimeout(ctx, time.Second*1)
 	defer cancel()
 
@@ -54,5 +55,36 @@ func (u *uDB) SetUserState(ctx context.Context, userID string, state bool) (stri
 	}
 
 	return username, teamName, nil
+}
 
+func (u *uDB) GetReviews(ctx context.Context, userID string) ([]models.UserPR, error) {
+	u.logger.Debug().Str("evt", "call GetReview").Msg("")
+	dbCtx, cancel := context.WithTimeout(ctx, time.Second*1)
+	defer cancel()
+
+	rows, err := u.pool.Query(dbCtx, GetReviewsQuery, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var upr []models.UserPR
+	for rows.Next() {
+		var prID,
+			prName,
+			authorID,
+			status string
+
+		if err := rows.Scan(&prID, &prName, &authorID, &status); err != nil {
+			return nil, err
+		}
+
+		upr = append(upr, models.UserPR{PRID: prID, PRName: prName, AuthorID: authorID, Status: status})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return upr, nil
 }

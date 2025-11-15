@@ -56,6 +56,5 @@ func RequestLogger(logger *zerolog.Logger) gin.HandlerFunc {
 		default:
 			evt.Info().Msg(msg)
 		}
-
 	}
 }

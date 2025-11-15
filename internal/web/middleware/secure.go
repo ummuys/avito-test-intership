@@ -16,20 +16,31 @@ func Auth(tm secure.TokenManager, access []string) gin.HandlerFunc {
 		if authHeader == "" {
 			g.Set("msg", "empty token")
 			err := models.Error{
-				Message: errs.ErrMsgNotFound,
-				Code:    errs.ErrCodeNotFound,
+				Message: errs.ErrMsgBadToken,
+				Code:    errs.ErrCodeBadToken,
 			}
 			g.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponse{Error: err})
 			return
 		}
 
-		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		parts := strings.Fields(authHeader)
+		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+			g.Set("msg", "invalid token format")
+			err := models.Error{
+				Message: errs.ErrMsgBadToken,
+				Code:    errs.ErrCodeBadToken,
+			}
+			g.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponse{Error: err})
+			return
+		}
+
+		tokenStr := parts[1]
 		claims, err := tm.ValidateAccessToken(tokenStr)
 		if err != nil {
 			g.Set("msg", err.Error())
 			err := models.Error{
-				Message: errs.ErrMsgNotFound,
-				Code:    errs.ErrCodeNotFound,
+				Message: errs.ErrMsgBadToken,
+				Code:    errs.ErrCodeBadToken,
 			}
 			g.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponse{Error: err})
 			return
@@ -49,7 +60,7 @@ func Auth(tm secure.TokenManager, access []string) gin.HandlerFunc {
 				Message: errs.ErrMsgNotFound,
 				Code:    errs.ErrCodeNotFound,
 			}
-			g.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{Error: err})
+			g.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponse{Error: err})
 			return
 		}
 		g.Set("user_id", user_id)

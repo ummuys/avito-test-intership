@@ -1,3 +1,5 @@
+
+# DOCKER
 update-image:
 	-docker compose down 
 	-docker image rm docker-pr-service
@@ -15,3 +17,11 @@ update-all:
 
 check-containers:
 	-docker compose ps -a
+
+# CI
+
+code-rewiew:
+	cd .. && ./docker/scripts/pre-commit.sh
+
+code-auto-format:
+	cd .. && go fmt ./...

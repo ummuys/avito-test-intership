@@ -42,7 +42,7 @@ func (u *uh) SetState(g *gin.Context) {
 				Code:    errs.ErrCodeNotFound,
 				Message: errs.ErrMsgNotFound,
 			}
-			g.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponse{Error: err})
+			g.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{Error: err})
 		default:
 			err := models.Error{
 				Code:    errs.ErrCodeInternal,
@@ -60,9 +60,41 @@ func (u *uh) SetState(g *gin.Context) {
 		IsActive: req.IsActive,
 	}
 	g.Set("msg", "user state changed")
-	g.JSON(http.StatusOK, models.SetUserStateResponse{User: user})
+	g.JSON(http.StatusOK, models.UserWrapper{User: user})
 }
 
-func (u *uh) Get(g *gin.Context) {
+func (u *uh) GetReviews(g *gin.Context) {
+	ctx := g.Request.Context()
+	userID := g.Query("user_id")
+	if userID == "" {
+		g.Set("msg", errs.ErrCodeInvalidUserID)
+		err := models.Error{
+			Code:    errs.ErrCodeInvalidUserID,
+			Message: errs.ErrMsgInvalidUserID,
+		}
+		g.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{Error: err})
+		return
+	}
+	upr, err := u.svc.GetReviews(ctx, userID)
+	if err != nil {
+		g.Set("msg", err.Error())
+		switch {
+		case errors.Is(err, errs.ErrPGNotFound):
+			err := models.Error{
+				Code:    errs.ErrCodeNotFound,
+				Message: errs.ErrMsgNotFound,
+			}
+			g.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponse{Error: err})
+		default:
+			err := models.Error{
+				Code:    errs.ErrCodeInternal,
+				Message: errs.ErrMsgInternal,
+			}
+			g.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{Error: err})
+		}
+		return
+	}
 
+	g.Set("msg", "user reviews returned")
+	g.JSON(http.StatusOK, models.GetUserReviewsResponse{UserID: userID, PR: upr})
 }

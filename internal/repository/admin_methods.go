@@ -76,7 +76,8 @@ func (ad *adDB) ValidateRole(ctx context.Context, role string) error {
 	dbCtx, cancel := context.WithTimeout(ctx, time.Second*2)
 	defer cancel()
 
-	_, err := ad.pool.Exec(dbCtx, CheckRole, role)
+	var tmp string
+	err := ad.pool.QueryRow(dbCtx, CheckRole, role).Scan(&tmp)
 	if err != nil {
 		saveRawErr(ad.logger, "CheckRole", err)
 	}

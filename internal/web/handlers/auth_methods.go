@@ -86,6 +86,12 @@ func (ah *ah) Authorization(g *gin.Context) {
 				Message: errs.ErrMsgNotFound,
 			}
 			g.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{Error: err})
+		case errors.Is(err, errs.ErrInvalidCredentials):
+			err := models.Error{
+				Code:    errs.ErrCodeInvalidCredentials,
+				Message: errs.ErrMsgInvalidCredentials,
+			}
+			g.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{Error: err})
 		default:
 			err := models.Error{
 				Code:    errs.ErrCodeInternal,
@@ -118,7 +124,9 @@ func (ah *ah) Authorization(g *gin.Context) {
 		return
 	}
 
+	cfg := ah.tm.GetConfiguration()
+
 	g.Set("msg", "auth successful")
-	g.SetCookie("refresh_token", refresh, 3600*144, "/", "", false, true)
+	g.SetCookie("refresh_token", refresh, int(cfg.RefreshTokenLimit.Seconds()), "/", "", false, true)
 	g.JSON(http.StatusOK, models.AuthResponse{AccessToken: access})
 }

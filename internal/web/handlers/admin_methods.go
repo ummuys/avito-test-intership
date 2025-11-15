@@ -40,8 +40,8 @@ func (ad *adh) CreateUser(g *gin.Context) {
 		switch {
 		case errors.Is(err, errs.ErrPGDuplicate):
 			err := models.Error{
-				Code:    errs.ErrCodeTeamExists,
-				Message: errs.ErrMsgTeamExists,
+				Code:    errs.ErrCodeUserExists,
+				Message: errs.ErrMsgUserExists,
 			}
 			g.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{Error: err})
 		default:
@@ -55,5 +55,5 @@ func (ad *adh) CreateUser(g *gin.Context) {
 	}
 
 	g.Set("msg", "user created")
-	g.JSON(http.StatusOK, models.CreateUserResponse{Username: req.Username, Role: req.Role})
+	g.JSON(http.StatusCreated, models.CreateUserResponse{Username: req.Username, Role: req.Role})
 }

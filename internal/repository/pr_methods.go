@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/ummuys/avito-test-intership/internal/config"
+	"github.com/ummuys/avito-test-intership/internal/errs"
 	"github.com/ummuys/avito-test-intership/internal/models"
 )
 
@@ -55,20 +56,21 @@ func (p *prDB) Create(ctx context.Context, prID, prName, authorID string) (resp 
 		}
 	}()
 
-	_, err = tx.Exec(dbCtx, CreatePRStep1, prID, prName, authorID)
+	_, err = tx.Exec(dbCtx, CreatePRQuery, prID, prName, authorID)
 	if err != nil {
-		saveRawErr(p.logger, "CreatePRStep1", err)
+		saveRawErr(p.logger, "CreatePRQuery", err)
 		return
 	}
 
 	rews := make([]string, 0, 2)
 
 	var rows pgx.Rows
-	rows, err = tx.Query(dbCtx, CreatePRStep2, authorID)
+	rows, err = tx.Query(dbCtx, GetAssignedReviewersQuery, authorID, 2)
 	if err != nil {
-		saveRawErr(p.logger, "CreatePRStep2", err)
+		saveRawErr(p.logger, "GetAssignedReviewersQuery", err)
 		return
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var r string
@@ -87,18 +89,21 @@ func (p *prDB) Create(ctx context.Context, prID, prName, authorID string) (resp 
 
 	b := &pgx.Batch{}
 	for i, r := range rews {
-		b.Queue(CreatePRStep3, prID, r, i+1)
+		b.Queue(PasteARtoHistoryQuery, prID, r, i+1)
 	}
 
 	sb := tx.SendBatch(dbCtx, b)
 	for i := 0; i < len(rews); i++ {
 		if _, err = sb.Exec(); err != nil {
-			saveRawErr(p.logger, "CreatePRStep3", err)
+			saveRawErr(p.logger, "PasteARtoHistoryQuery", err)
 			_ = sb.Close()
 			return
 		}
 	}
-	sb.Close()
+
+	if err = sb.Close(); err != nil {
+		return
+	}
 
 	if err = tx.Commit(ctx); err != nil {
 		return
@@ -113,8 +118,8 @@ func (p *prDB) Create(ctx context.Context, prID, prName, authorID string) (resp 
 	}
 
 	return resp, nil
-
 }
+
 func (p *prDB) Merge(ctx context.Context, prID string) (resp models.MergeRPResponse, err error) {
 	p.logger.Debug().Str("evt", "call CreatePR").Msg("")
 	dbCtx, cancel := context.WithTimeout(ctx, time.Second*1)
@@ -134,16 +139,31 @@ func (p *prDB) Merge(ctx context.Context, prID string) (resp models.MergeRPRespo
 		}
 	}()
 
-	var status string
-	err = tx.QueryRow(dbCtx, CheckIsPRMerge, prID).Scan(&status)
-	if status != "MERGED" {
+	var c int
+	err = tx.QueryRow(dbCtx, CheckReviewersCountQuery, prID).Scan(&c)
+	if err != nil {
+		saveRawErr(p.logger, "CheckReviewersCountQuery", err)
+		return
+	}
 
-		_, err = tx.Exec(dbCtx, MergePRStep1, prID)
+	if c < 1 {
+		err = errs.ErrNotEnoughReviewers
+		return
+	}
+
+	var status string
+	err = tx.QueryRow(dbCtx, CheckIsPRMergeQuery, prID).Scan(&status)
+	if err != nil {
+		saveRawErr(p.logger, "CheckIsPRMergeQuery", err)
+		return
+	}
+
+	if status != "MERGED" {
+		_, err = tx.Exec(dbCtx, MarkPRAsMergedQuery, prID)
 		if err != nil {
-			saveRawErr(p.logger, "CreatePRStep1", err)
+			saveRawErr(p.logger, "MarkPRAsMergedQuery", err)
 			return models.MergeRPResponse{}, err
 		}
-
 	}
 
 	var (
@@ -152,22 +172,26 @@ func (p *prDB) Merge(ctx context.Context, prID string) (resp models.MergeRPRespo
 		mergedAt time.Time
 	)
 
-	err = tx.QueryRow(dbCtx, MergePRStep2, prID).Scan(&prName, &authorID, &mergedAt)
+	err = tx.QueryRow(dbCtx, GetMergePRInfoQuery, prID).Scan(&prName, &authorID, &mergedAt)
 	if err != nil {
+		saveRawErr(p.logger, "GetPRInfoQuery", err)
 		return
 	}
 
 	var rows pgx.Rows
-	rows, err = tx.Query(dbCtx, MergePRStep3, prID)
+	rows, err = tx.Query(dbCtx, GetPRARQuery, prID)
 	if err != nil {
+		saveRawErr(p.logger, "GetPRARQuery", err)
 		return
 	}
 	defer rows.Close()
 
-	rews := make([]string, 0, 2)
+	var rews []string
 	for rows.Next() {
 		var r string
-		rows.Scan(&r)
+		if err = rows.Scan(&r); err != nil {
+			return
+		}
 		rews = append(rews, r)
 	}
 
@@ -188,6 +212,111 @@ func (p *prDB) Merge(ctx context.Context, prID string) (resp models.MergeRPRespo
 		resp.AssignedReviewers = append(resp.AssignedReviewers, rews...)
 	}
 
-	return resp, nil
+	return
 }
-func (p *prDB) ReassignPR() {}
+
+func (p *prDB) ReassignPR(ctx context.Context, prID string, oldUserID string) (resp models.ReassignPRResponse, err error) {
+	p.logger.Debug().Str("evt", "call ReassignPR").Msg("")
+	dbCtx, cancel := context.WithTimeout(ctx, time.Second*1)
+	defer cancel()
+
+	var tx pgx.Tx
+	tx, err = p.pool.Begin(dbCtx)
+	if err != nil {
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			if rbErr := tx.Rollback(context.Background()); rbErr != nil && !errors.Is(rbErr, pgx.ErrTxClosed) {
+				p.logger.Error().Err(rbErr).Msg("rollback failed")
+			}
+		}
+	}()
+
+	// Check pr_status
+	var status string
+	if err = tx.QueryRow(dbCtx, CheckIsPRMergeQuery, prID).Scan(&status); err != nil {
+		saveRawErr(p.logger, "CheckIsPRMergeQuery", err)
+		return
+	}
+
+	if status == "MERGED" {
+		err = errs.ErrPRMerged
+		return
+	}
+
+	// Check rv on pr
+	var rvInPr bool
+	if err = tx.QueryRow(dbCtx, CheckRVInPR, oldUserID, prID).Scan(&rvInPr); err != nil {
+		saveRawErr(p.logger, "CheckRVInPR", err)
+		return
+	}
+
+	if !rvInPr {
+		err = errs.ErrRVNotAssigned
+		return
+	}
+
+	var (
+		prName   string
+		authorID string
+	)
+
+	err = tx.QueryRow(dbCtx, GetReassignRInfoQuery, prID).Scan(&prName, &authorID)
+	if err != nil {
+		saveRawErr(p.logger, "GetReassignRInfoQueryy", err)
+		return
+	}
+
+	// Try to find candidate
+	var newID string
+	if err = tx.QueryRow(dbCtx, GetReassignedReviewersQuery, oldUserID, authorID, prID, 1).Scan(&newID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			err = errs.ErrNoCandidate
+			return
+		}
+		saveRawErr(p.logger, "GetReassignedReviewersQuery", err)
+		return
+	}
+
+	_, err = tx.Exec(dbCtx, ChangeHistory, newID, oldUserID, prID)
+	if err != nil {
+		saveRawErr(p.logger, "ChangeHistory", err)
+		return
+	}
+
+	var rows pgx.Rows
+	rows, err = tx.Query(dbCtx, GetPRARQuery, prID)
+	if err != nil {
+		saveRawErr(p.logger, "GetPRARQuery", err)
+		return
+	}
+	defer rows.Close()
+
+	var rews []string
+	for rows.Next() {
+		var r string
+		if err = rows.Scan(&r); err != nil {
+			return
+		}
+		rews = append(rews, r)
+	}
+
+	if err = rows.Err(); err != nil {
+		return
+	}
+
+	if err = tx.Commit(context.Background()); err != nil {
+		return
+	}
+
+	resp.PRID = prID
+	resp.PRName = prName
+	resp.AuthorID = authorID
+	resp.Status = status
+	resp.AssignedReviewers = append(resp.AssignedReviewers, rews...)
+	resp.ReplacedBy = newID
+
+	return
+}

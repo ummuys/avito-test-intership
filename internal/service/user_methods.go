@@ -5,6 +5,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/ummuys/avito-test-intership/internal/errs"
+	"github.com/ummuys/avito-test-intership/internal/models"
 	"github.com/ummuys/avito-test-intership/internal/repository"
 )
 
@@ -22,6 +23,7 @@ func (u *us) SetState(ctx context.Context, userID string, state bool) (string, s
 	return username, team_name, errs.ParsePgErr(err)
 }
 
-func (u *us) Get() {
-
+func (u *us) GetReviews(ctx context.Context, userID string) ([]models.UserPR, error) {
+	upr, err := u.db.GetReviews(ctx, userID)
+	return upr, errs.ParsePgErr(err)
 }

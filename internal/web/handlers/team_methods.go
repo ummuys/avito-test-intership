@@ -20,10 +20,6 @@ func NewTeamHandler(svc service.TeamService, logger *zerolog.Logger) TeamHandler
 	return &th{svc: svc, logger: logger}
 }
 
-func parseAddTeamRequest() {
-
-}
-
 func (t *th) Create(g *gin.Context) {
 	ctx := g.Request.Context()
 	var req models.AddTeamRequest
@@ -56,7 +52,7 @@ func (t *th) Create(g *gin.Context) {
 		return
 	}
 	g.Set("msg", "team added")
-	g.JSON(http.StatusOK, req)
+	g.JSON(http.StatusCreated, req)
 }
 
 func (t *th) Get(g *gin.Context) {
@@ -94,5 +90,4 @@ func (t *th) Get(g *gin.Context) {
 
 	g.Set("msg", "team returned")
 	g.JSON(http.StatusOK, team)
-
 }

@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 
 	"github.com/rs/zerolog"
 	"github.com/ummuys/avito-test-intership/internal/errs"
@@ -29,7 +28,7 @@ func (a *aus) CheckCredentials(ctx context.Context, username, password string) (
 	}
 
 	if !a.ph.CheckHash(password, hashPass) {
-		return 0, "", errors.New(errs.ErrCodeInvalidTeamName)
+		return 0, "", errs.ErrInvalidCredentials
 	}
 
 	return user_id, role, nil
