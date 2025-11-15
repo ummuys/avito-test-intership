@@ -1,5 +1,13 @@
 
 # DOCKER
+
+service-up:
+	-docker compose up -d
+
+service-down:
+	-docker compose down
+
+
 update-image:
 	-docker compose down 
 	-docker image rm docker-pr-service
@@ -20,8 +28,8 @@ check-containers:
 
 # CI
 
-code-rewiew:
+code-review:
 	cd .. && ./docker/scripts/pre-commit.sh
 
 code-auto-format:
-	cd .. && go fmt ./...
+	cd .. && gofumpt -w $$(find . -name '*.go' -type f)

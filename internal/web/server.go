@@ -72,7 +72,7 @@ func InitServer(hand di.Handlers, sec di.Secure, logger *zerolog.Logger) *http.S
 	authGroup.GET(getUserReviewPath, uh.GetReviews)
 
 	// ------- ADMIN GROUP -------
-	//USERS
+	// USERS
 	adminGroup.POST(setUserActivePath, uh.SetState)
 
 	// PR

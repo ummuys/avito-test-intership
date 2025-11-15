@@ -14,6 +14,18 @@
 * Docker
 * Golang-migrate
 
+
+## Makefile:
+
+* service-up - запуск сервиса
+* service-down - остановка сервиса
+* update-image - пересобрать изображение
+* update-volumes - очистить хранилище и создать по новой
+* update-all - обновить image + volumes
+* check-containers - проверить состание контейнеров
+* code-review - пройтись линтером по проекту
+* code-auto-format - авто-формат кода
+
 ## Структура проекта:
 
 ├── cmd -- вход в программу
