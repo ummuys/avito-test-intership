@@ -26,12 +26,11 @@ type Secure struct {
 }
 
 type Services struct {
-	PRService     service.PRService
-	ServerService service.ServerService
-	TeamService   service.TeamService
-	UserService   service.UserService
-	AdminService  service.AdminService
-	AuthService   service.AuthService
+	PRService    service.PRService
+	TeamService  service.TeamService
+	UserService  service.UserService
+	AdminService service.AdminService
+	AuthService  service.AuthService
 }
 
 type Handlers struct {

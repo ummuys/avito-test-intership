@@ -5,7 +5,6 @@ const (
 	INSERT INTO pr_review.pull_requests (pr_id, pr_name, author_id) VALUES ($1, $2, $3)
 	`
 
-	// CHECK THIS
 	GetAssignedReviewersQuery = `
 	SELECT 
 		user_id

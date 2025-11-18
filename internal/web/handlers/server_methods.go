@@ -5,18 +5,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"github.com/ummuys/avito-test-intership/internal/service"
 )
 
 type sh struct {
-	svc    service.ServerService
 	logger *zerolog.Logger
 }
 
-func NewServerHandler(svc service.ServerService, logger *zerolog.Logger) ServerHandler {
-	return &sh{svc: svc, logger: logger}
+func NewServerHandler(logger *zerolog.Logger) ServerHandler {
+	return &sh{logger: logger}
 }
 
 func (s *sh) Health(g *gin.Context) {
+	s.logger.Debug().Str("evt", "call Health").Msg("")
 	g.JSON(http.StatusOK, gin.H{})
 }

@@ -121,7 +121,7 @@ func (p *prDB) Create(ctx context.Context, prID, prName, authorID string) (resp 
 }
 
 func (p *prDB) Merge(ctx context.Context, prID string) (resp models.MergeRPResponse, err error) {
-	p.logger.Debug().Str("evt", "call CreatePR").Msg("")
+	p.logger.Debug().Str("evt", "call MergePR").Msg("")
 	dbCtx, cancel := context.WithTimeout(ctx, time.Second*1)
 	defer cancel()
 
@@ -234,7 +234,6 @@ func (p *prDB) ReassignPR(ctx context.Context, prID string, oldUserID string) (r
 		}
 	}()
 
-	// Check pr_status
 	var status string
 	if err = tx.QueryRow(dbCtx, CheckIsPRMergeQuery, prID).Scan(&status); err != nil {
 		saveRawErr(p.logger, "CheckIsPRMergeQuery", err)
@@ -246,7 +245,6 @@ func (p *prDB) ReassignPR(ctx context.Context, prID string, oldUserID string) (r
 		return
 	}
 
-	// Check rv on pr
 	var rvInPr bool
 	if err = tx.QueryRow(dbCtx, CheckRVInPR, oldUserID, prID).Scan(&rvInPr); err != nil {
 		saveRawErr(p.logger, "CheckRVInPR", err)
@@ -269,7 +267,6 @@ func (p *prDB) ReassignPR(ctx context.Context, prID string, oldUserID string) (r
 		return
 	}
 
-	// Try to find candidate
 	var newID string
 	if err = tx.QueryRow(dbCtx, GetReassignedReviewersQuery, oldUserID, authorID, prID, 1).Scan(&newID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

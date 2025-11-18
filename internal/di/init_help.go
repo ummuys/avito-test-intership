@@ -51,13 +51,12 @@ func InitRepositories(ctx context.Context, logger *zerolog.Logger) (Repositories
 
 func InitServices(rep Repositories, sec Secure, logger *zerolog.Logger) Services {
 	prs := service.NewPRService(rep.PRDB, logger)
-	ss := service.NewServerService(rep.PRDB, logger)
 	ts := service.NewTeamService(rep.TeamDB, logger)
 	us := service.NewUserService(rep.UserDB, logger)
 	aus := service.NewAuthService(rep.AuthDB, sec.PasswordHasher, logger)
 	ads := service.NewAdminService(rep.AdminDB, sec.PasswordHasher, logger)
 	return Services{
-		PRService: prs, ServerService: ss,
+		PRService:   prs,
 		TeamService: ts, UserService: us,
 		AdminService: ads, AuthService: aus,
 	}
@@ -74,7 +73,7 @@ func InitSecure() (Secure, error) {
 
 func InitHandlers(svc Services, sec Secure, logger *zerolog.Logger) Handlers {
 	prh := handlers.NewPRHandler(svc.PRService, logger)
-	sh := handlers.NewServerHandler(svc.ServerService, logger)
+	sh := handlers.NewServerHandler(logger)
 	th := handlers.NewTeamHandler(svc.TeamService, logger)
 	uh := handlers.NewUserHandler(svc.UserService, logger)
 	auh := handlers.NewAuthHandler(sec.TokenManager, svc.AuthService, logger)

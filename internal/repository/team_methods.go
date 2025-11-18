@@ -35,7 +35,6 @@ func NewTeamDB(ctx context.Context, logger *zerolog.Logger) (TeamDB, error) {
 	return &tDB{pool: pool, logger: logger}, nil
 }
 
-// TEAM
 func (t *tDB) AddTeam(ctx context.Context, body models.AddTeamRequest) (err error) {
 	t.logger.Debug().Str("evt", "call AddTeam").Msg("")
 

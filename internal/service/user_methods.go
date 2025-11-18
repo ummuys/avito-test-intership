@@ -19,11 +19,13 @@ func NewUserService(db repository.UserDB, logger *zerolog.Logger) UserService {
 }
 
 func (u *us) SetState(ctx context.Context, userID string, state bool) (string, string, error) {
+	u.logger.Debug().Str("evt", "call SetState").Msg("")
 	username, team_name, err := u.db.SetUserState(ctx, userID, state)
 	return username, team_name, errs.ParsePgErr(err)
 }
 
 func (u *us) GetReviews(ctx context.Context, userID string) ([]models.UserPR, error) {
+	u.logger.Debug().Str("evt", "call GetReviews").Msg("")
 	upr, err := u.db.GetReviews(ctx, userID)
 	return upr, errs.ParsePgErr(err)
 }

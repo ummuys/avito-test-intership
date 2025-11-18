@@ -21,6 +21,7 @@ func NewPRHandler(svc service.PRService, logger *zerolog.Logger) PRHandler {
 }
 
 func (p *prh) Create(g *gin.Context) {
+	p.logger.Debug().Str("evt", "call CreatePR").Msg("")
 	ctx := g.Request.Context()
 	var req models.CreatePRRequest
 	if err := g.ShouldBindBodyWithJSON(&req); err != nil {
@@ -64,6 +65,7 @@ func (p *prh) Create(g *gin.Context) {
 }
 
 func (p *prh) Merge(g *gin.Context) {
+	p.logger.Debug().Str("evt", "call MergePR").Msg("")
 	ctx := g.Request.Context()
 	var req models.MergePRRequest
 	if err := g.ShouldBindBodyWithJSON(&req); err != nil {
@@ -106,6 +108,7 @@ func (p *prh) Merge(g *gin.Context) {
 }
 
 func (p *prh) Reassign(g *gin.Context) {
+	p.logger.Debug().Str("evt", "call ReassignPR").Msg("")
 	ctx := g.Request.Context()
 	var req models.ReassignPRRequest
 	if err := g.ShouldBindBodyWithJSON(&req); err != nil {

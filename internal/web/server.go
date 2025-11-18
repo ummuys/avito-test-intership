@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
 	"github.com/rs/zerolog"
 	"github.com/ummuys/avito-test-intership/internal/di"
 	"github.com/ummuys/avito-test-intership/internal/web/middleware"
@@ -16,12 +15,6 @@ import (
 func InitServer(hand di.Handlers, sec di.Secure, logger *zerolog.Logger) *http.Server {
 	gin.SetMode(gin.ReleaseMode)
 	g := gin.New()
-
-	// Эта комманда нужно для строго парса запросов. Если в будущем
-	// в полях запроса будут необязательные поля, то этот флаг
-	// нужно будет убрать и заменить на binding:"required",
-	// подставив его к нужным полям
-	binding.EnableDecoderDisallowUnknownFields = true
 
 	prh := hand.PRHandler
 	th := hand.TeamHandler

@@ -21,6 +21,7 @@ func NewTeamHandler(svc service.TeamService, logger *zerolog.Logger) TeamHandler
 }
 
 func (t *th) Create(g *gin.Context) {
+	t.logger.Debug().Str("evt", "call CreateTeam").Msg("")
 	ctx := g.Request.Context()
 	var req models.AddTeamRequest
 	if err := g.ShouldBindBodyWithJSON(&req); err != nil {
@@ -56,6 +57,7 @@ func (t *th) Create(g *gin.Context) {
 }
 
 func (t *th) Get(g *gin.Context) {
+	t.logger.Debug().Str("evt", "call GetTeam").Msg("")
 	ctx := g.Request.Context()
 	teamName := g.Query("team_name")
 	if teamName == "" {

@@ -21,6 +21,7 @@ func NewUserHandler(svc service.UserService, logger *zerolog.Logger) UserHandler
 }
 
 func (u *uh) SetState(g *gin.Context) {
+	u.logger.Debug().Str("evt", "call SetState").Msg("")
 	ctx := g.Request.Context()
 	var req models.SetUserStateRequest
 	if err := g.ShouldBindBodyWithJSON(&req); err != nil {
@@ -64,6 +65,7 @@ func (u *uh) SetState(g *gin.Context) {
 }
 
 func (u *uh) GetReviews(g *gin.Context) {
+	u.logger.Debug().Str("evt", "call GetReviews").Msg("")
 	ctx := g.Request.Context()
 	userID := g.Query("user_id")
 	if userID == "" {

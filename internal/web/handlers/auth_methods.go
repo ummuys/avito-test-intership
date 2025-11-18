@@ -23,6 +23,7 @@ func NewAuthHandler(tm secure.TokenManager, aus service.AuthService, logger *zer
 }
 
 func (ah *ah) UpdateAccessToken(g *gin.Context) {
+	ah.logger.Debug().Str("evt", "call UpdateAccessToken").Msg("")
 	refreshToken, err := g.Cookie("refresh_token")
 	if err != nil {
 		g.Set("msg", err.Error())
@@ -64,6 +65,7 @@ func (ah *ah) UpdateAccessToken(g *gin.Context) {
 }
 
 func (ah *ah) Authorization(g *gin.Context) {
+	ah.logger.Debug().Str("evt", "call Authorization").Msg("")
 	ctx := g.Request.Context()
 	var req models.AuthRequest
 	if err := g.ShouldBindBodyWithJSON(&req); err != nil {

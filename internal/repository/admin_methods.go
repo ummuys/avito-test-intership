@@ -72,7 +72,7 @@ func (ad *adDB) CreateUser(ctx context.Context, username string, hashPassword st
 }
 
 func (ad *adDB) ValidateRole(ctx context.Context, role string) error {
-	ad.logger.Debug().Str("evt", "call CheckRole").Msg("")
+	ad.logger.Debug().Str("evt", "call ValidateRole").Msg("")
 	dbCtx, cancel := context.WithTimeout(ctx, time.Second*2)
 	defer cancel()
 

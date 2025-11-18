@@ -33,7 +33,7 @@ func NewUserDB(ctx context.Context, logger *zerolog.Logger) (UserDB, error) {
 }
 
 func (u *uDB) SetUserState(ctx context.Context, userID string, state bool) (string, string, error) {
-	u.logger.Debug().Str("evt", "call GetReview").Msg("")
+	u.logger.Debug().Str("evt", "call SetUserState").Msg("")
 	dbCtx, cancel := context.WithTimeout(ctx, time.Second*1)
 	defer cancel()
 

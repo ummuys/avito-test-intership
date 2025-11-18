@@ -13,5 +13,4 @@ func NewServerService(db repository.PRDB, logger *zerolog.Logger) ServerService 
 	return &ss{logger: logger}
 }
 
-func (s *ss) Health() {
-}
+func (s *ss) Health() {}
