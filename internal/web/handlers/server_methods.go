@@ -17,5 +17,6 @@ func NewServerHandler(logger *zerolog.Logger) ServerHandler {
 
 func (s *sh) Health(g *gin.Context) {
 	s.logger.Debug().Str("evt", "call Health").Msg("")
+	g.Set("msg", "server ok")
 	g.JSON(http.StatusOK, gin.H{})
 }
